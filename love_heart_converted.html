@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Love Heart ❤️</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#060208;font-family:Arial,sans-serif}
+canvas{display:block;width:100%;height:100%}.hint{position:fixed;bottom:max(14px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:#a98798;font-size:12px;opacity:.75;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="love"></canvas><div class="hint">made with love 💗</div>
+<script>
+(()=> {
+"use strict";
+const canvas=document.getElementById("love"),ctx=canvas.getContext("2d");
+const BG="#060208",phrases=["I love you","Seni seviyorum","Te amo","Je t'aime","Ich liebe dich","Ti amo","Eu te amo","Я тебя люблю","사랑해","愛してる","我爱你","मैं तुमसे प्यार करता हूँ","Σ' αγαπώ","Ik hou van jou","Jag älskar dig","Kocham cię","ฉันรักเธอ","Anh yêu em","Aku cinta kamu","Я тебе кохаю"];
+let W=0,H=0,dpr=1,items=[],start=0,raf=0,seed=11;
+function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function pick(a){return a[Math.floor(rand()*a.length)]}
+function clamp(v){return Math.max(0,Math.min(1,v))}
+function rgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)}
+function hex(a){return "#"+a.map(v=>Math.round(clamp(v)*255).toString(16).padStart(2,"0")).join("")}
+function blend(a,b,k){return a.map((v,i)=>v+(b[i]-v)*k)}
+function inside(x,y){let q=x*x+y*y-1;return q*q*q-x*x*y*y*y<=0}
+function build(){
+ items=[];seed=11;
+ const scale=Math.min(W/38,H/35),cx=W/2,cy=H/2-4;
+ let phrases=phrasesOrder(),pi=0;
+ const rowStep=Math.max(10,Math.min(14,H/48)),colStep=Math.max(7,Math.min(10,W/42));
+ for(let py=-14.2;py<=14.2;py+=rowStep/scale){
+  let row=[];
+  for(let px=-16;px<=16;px+=colStep/scale){
+   if(!inside(px/16,py/13.5))continue;
+   const text=phrases[pi++%phrases.length],size=pick([9,10,11,12]);
+   ctx.font=`bold ${size}px Arial,sans-serif`;
+   row.push({x:cx+px*scale,y:cy-py*scale,text,size,edge:false,drift:(rand()-.5)*20});
+  }
+  row.forEach((p,i)=>{p.edge=i===0||i===row.length-1;let rad=Math.min(1,Math.hypot((p.x-cx)/(16*scale),(p.y-cy)/(14.5*scale)));let c=blend([.58,0,.09],[.90,.05,.14],.25+.75*rad);c=blend(c,[.98,.10,.16],rand()*.35+(p.edge?.3:0));p.color=hex(c);items.push(p)});
+ }
+ const edges=items.filter(p=>p.edge),inner=items.filter(p=>!p.edge);
+ edges.sort((a,b)=>Math.atan2(a.x-cx,cy-a.y)-Math.atan2(b.x-cx,cy-b.y));
+ inner.sort((a,b)=>Math.hypot(b.x-cx,b.y-cy)-Math.hypot(a.x-cx,a.y-cy));
+ items=edges.concat(inner);
+ items.forEach((p,i)=>p.delay=i/Math.max(1,items.length-1)*10000);
+}
+function phrasesOrder(){let a=phrases.slice();for(let i=a.length-1;i>0;i--){let j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.textAlign="center";ctx.textBaseline="middle";build();start=performance.now();if(!raf)raf=requestAnimationFrame(draw)}
+function draw(now){
+ ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);let elapsed=now-start;
+ for(const p of items){
+  let u=clamp((elapsed-p.delay)/672);if(u<=0)continue;
+  let e=1-Math.pow(1-u,3),x=p.x+p.drift*(1-e),y=p.y-34*(1-e),c=rgb(p.color);
+  ctx.font=`bold ${p.size}px Arial,sans-serif`;ctx.shadowBlur=0;ctx.fillStyle=hex(blend(rgb(BG),c.map(v=>v*.3),e));ctx.fillText(p.text,x+2,y+3);
+  ctx.font=`bold ${p.size+1}px Arial,sans-serif`;ctx.shadowColor=p.color;ctx.shadowBlur=5;ctx.fillStyle=hex(blend(rgb(BG),c.map(v=>v*.2),e*e));ctx.fillText(p.text,x,y);
+  let flash=.75*Math.sin(Math.PI*clamp((u-.55)/.45));ctx.font=`bold ${p.size}px Arial,sans-serif`;ctx.fillStyle=u>=1?p.color:hex(blend(blend(rgb(BG),c,Math.pow(e,1.5)),[1,.78,.78],flash));ctx.shadowBlur=3;ctx.fillText(p.text,x,y);
+ }
+ if(elapsed>10672&&items.length){let p=items[Math.floor(now/140)%items.length],pulse=(Math.sin(now/140)+1)*.275;ctx.font=`bold ${p.size}px Arial,sans-serif`;ctx.fillStyle=hex(blend(rgb(p.color),[1,.78,.78],pulse));ctx.shadowColor=p.color;ctx.shadowBlur=5;ctx.fillText(p.text,p.x,p.y)}
+ ctx.shadowBlur=0;raf=requestAnimationFrame(draw)
+}
+addEventListener("resize",resize,{passive:true});resize();
+})();
+</script>
+</body>
+</html>
